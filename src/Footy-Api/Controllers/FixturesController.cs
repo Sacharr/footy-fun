@@ -12,6 +12,7 @@ namespace FootyApi.Controllers
     public class FixturesController : ControllerBase
     {
         private readonly IFootyApiClient _api;
+        private const int DefaultTeamId = 57; // Fixed team id
 
         public FixturesController(IFootyApiClient api)
         {
@@ -22,18 +23,16 @@ namespace FootyApi.Controllers
         [HttpGet("{leagueId}")]
         public async Task<IActionResult> GetFixtures(string leagueId)
         {
-            // Adjust the relative URL to the external API's contract
             var relative = $"competitions/{leagueId}/matches";
             var result = await _api.GetAsync<object>(relative).ConfigureAwait(false);
             return Ok(result);
         }
 
-        // GET /api/fixtures/team/{teamId}/next
-        [HttpGet("team/{teamId}/next")]
-        public async Task<IActionResult> GetNextFixture(int teamId)
+        // GET /api/fixtures/team/next  -> returns next fixture for team 57 (no input required)
+        [HttpGet("team/next")]
+        public async Task<IActionResult> GetNextFixture()
         {
-            // adjust the relative path to the external API if needed (some APIs support filtering: status=SCHEDULED)
-            var relative = $"teams/{teamId}/matches";
+            var relative = $"teams/{DefaultTeamId}/matches";
             var json = await _api.GetAsync<JsonElement>(relative).ConfigureAwait(false);
 
             if (json.ValueKind != JsonValueKind.Object)
@@ -96,7 +95,6 @@ namespace FootyApi.Controllers
                         }
                     }
 
-                    // pick the earliest upcoming match
                     if (next == null || candidate.UtcDate < next.UtcDate)
                         next = candidate;
                 }

@@ -21,8 +21,8 @@ builder.Services.AddHttpClient<IFootyApiClient, FootyApiClient>((sp, client) =>
         client.BaseAddress = new Uri(baseUrl);
     }
 
-    // If the API requires a key, put it into appsettings.json and add as a header here
-    var apiKey = cfg["FootyApi:ApiKey"];
+    // Using dotnet secrets to store the API key, so it won't be in source control.
+    var apiKey = builder.Configuration["ApiKey"];
     if (!string.IsNullOrEmpty(apiKey))
     {
         // Use the correct header name required by your API (example: "X-Auth-Token")

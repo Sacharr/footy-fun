@@ -15,6 +15,8 @@ namespace FootyApi.Controllers
         private readonly IFootyApiClient _api;
         private const int DefaultTeamId = 57; // Fixed team id
         private const int PremierLeagueId = 2021; // Fixed Premier League id
+        private const int ChampionsLeagueId = 2001; // Fixed Premier League id
+
 
         public FixturesController(IFootyApiClient api)
         {
@@ -52,7 +54,7 @@ namespace FootyApi.Controllers
             {
                 $"dateFrom={today}",
                 $"dateTo={dateTo}",
-                $"competitions={PremierLeagueId}",
+                $"competitions={ChampionsLeagueId}",
                 $"limit={limit}",
                 $"status={status}"
             };

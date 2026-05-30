@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Footy_Api</RootNamespace>
+    <UserSecretsId>cf22c9be-5575-4f03-b30c-cba6eee59338</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

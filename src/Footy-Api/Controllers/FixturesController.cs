@@ -14,9 +14,9 @@ namespace FootyApi.Controllers
     {
         private readonly IFootyApiClient _api;
         private const int DefaultTeamId = 57; // Fixed team id
-        private const int PremierLeagueId = 2021; // Fixed Premier League id
-        private const int ChampionsLeagueId = 2001; // Fixed Premier League id
-
+        private const int PremierLeagueId = 2021; // Default competition id
+        private const int ChampionsLeagueId = 2001; //other competition id
+        private const int FifaWorldCupId = 2000; // world cup id
 
         public FixturesController(IFootyApiClient api)
         {
@@ -27,7 +27,7 @@ namespace FootyApi.Controllers
         //[HttpGet("{leagueId}")]
         //public async Task<IActionResult> GetFixtures(string leagueId)
         //{
-        //    var relative = $"competitions/{leagueId}/matches";
+        //    var relative = $"competitions/{FifaWorldCupId}/matches";
         //    var result = await _api.GetAsync<object>(relative).ConfigureAwait(false);
         //    return Ok(result);
         //}
@@ -35,11 +35,12 @@ namespace FootyApi.Controllers
         // GET /api/fixtures/team/57
         [HttpGet("team/{teamId}")]
         public async Task<IActionResult> GetFixtures(
-    string teamId = "57",
+    string teamId = "771",
     [FromQuery] string? dateFrom = null,
     [FromQuery] string? dateTo = null,
     [FromQuery] string? status = "SCHEDULED",
-    [FromQuery] string? limit = "1")
+    [FromQuery] string? limit = "1",
+    [FromQuery] int? competitionId = 2000)
         {
             var today = dateFrom ?? DateTime.UtcNow.ToString("yyyy-MM-dd");
 
@@ -50,11 +51,13 @@ namespace FootyApi.Controllers
                 dateTo = fromDate.AddDays(90).ToString("yyyy-MM-dd");
             }
 
+            var competition = competitionId ?? PremierLeagueId;
+
             var queryParams = new List<string>
             {
                 $"dateFrom={today}",
                 $"dateTo={dateTo}",
-                $"competitions={ChampionsLeagueId}",
+                $"competitions={competition}",
                 $"limit={limit}",
                 $"status={status}"
             };

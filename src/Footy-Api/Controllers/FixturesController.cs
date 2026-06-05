@@ -17,6 +17,8 @@ namespace FootyApi.Controllers
         private const int PremierLeagueId = 2021; // Default competition id
         private const int ChampionsLeagueId = 2001; //other competition id
         private const int FifaWorldCupId = 2000; // world cup id
+        private const int EnglandTeamId = 770;
+        private const int UsaTeamId = 771;
 
         public FixturesController(IFootyApiClient api)
         {
@@ -40,7 +42,7 @@ namespace FootyApi.Controllers
     [FromQuery] string? dateTo = null,
     [FromQuery] string? status = "SCHEDULED",
     [FromQuery] string? limit = "1",
-    [FromQuery] int? competitionId = 2000)
+    [FromQuery] int? competitionId = null)
         {
             var today = dateFrom ?? DateTime.UtcNow.ToString("yyyy-MM-dd");
 
@@ -51,7 +53,7 @@ namespace FootyApi.Controllers
                 dateTo = fromDate.AddDays(90).ToString("yyyy-MM-dd");
             }
 
-            var competition = competitionId ?? PremierLeagueId;
+            var competition = competitionId ?? FifaWorldCupId;
 
             var queryParams = new List<string>
             {

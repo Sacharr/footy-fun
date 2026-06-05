@@ -25,24 +25,16 @@ namespace FootyApi.Controllers
             _api = api;
         }
 
-        //// Example: GET /api/fixtures/PL
-        //[HttpGet("{leagueId}")]
-        //public async Task<IActionResult> GetFixtures(string leagueId)
-        //{
-        //    var relative = $"competitions/{FifaWorldCupId}/matches";
-        //    var result = await _api.GetAsync<object>(relative).ConfigureAwait(false);
-        //    return Ok(result);
-        //}
-
-        // GET /api/fixtures/team/57
         [HttpGet("team/{teamId}")]
-        public async Task<IActionResult> GetFixtures(
-    string teamId = "771",
-    [FromQuery] string? dateFrom = null,
-    [FromQuery] string? dateTo = null,
-    [FromQuery] string? status = "SCHEDULED",
-    [FromQuery] string? limit = "1",
-    [FromQuery] int? competitionId = null)
+        public async Task<IActionResult> GetFixtures
+        (
+            string teamId = "771",
+            [FromQuery] string? dateFrom = null,
+            [FromQuery] string? dateTo = null,
+            [FromQuery] string? status = "SCHEDULED",
+            [FromQuery] string? limit = "1",
+            [FromQuery] int? competitionId = null
+        )
         {
             var today = dateFrom ?? DateTime.UtcNow.ToString("yyyy-MM-dd");
 

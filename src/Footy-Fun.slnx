@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="Footy-Api/Footy-Api.csproj" />
+  <Project Path="FootyApp/FootyApp.csproj" Id="70dc8a4c-c494-406c-aa40-4b717a51eb1e" />
 </Solution>

@@ -39,10 +39,12 @@ namespace FootyApp.ViewModels
                 var json = await res.Content.ReadAsStringAsync();
 
                 var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var fixtures = JsonSerializer.Deserialize<FixturesResponse>(json, opts);
+
+                // API returns an array of matches -> deserialize to a list
+                var fixtures = JsonSerializer.Deserialize<List<MatchDto>>(json, opts);
 
                 Matches.Clear();
-                foreach (var m in fixtures?.Matches ?? Enumerable.Empty<MatchDto>())
+                foreach (var m in fixtures ?? Enumerable.Empty<MatchDto>())
                     Matches.Add(m);
 
                 StatusMessage = $"Loaded {Matches.Count} matches";

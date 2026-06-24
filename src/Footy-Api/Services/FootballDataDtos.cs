@@ -12,7 +12,7 @@ namespace FootyApi.Services
     public class FixturesResponse
     {
         [JsonPropertyName("matches")]
-        public List<MatchDto> Matches { get; set; } = [];
+        public List<MatchDto> Matches { get; set; } = new List<MatchDto>();
 
         [JsonPropertyName("competition")]
         public CompetitionDto? Competition { get; set; }

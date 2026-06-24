@@ -8,4 +8,8 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Footy-Api\Footy-Api.csproj" />
+  </ItemGroup>
+
 </Project>

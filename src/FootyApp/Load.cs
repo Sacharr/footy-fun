@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
@@ -9,13 +10,24 @@ using FootyApi.Services;
 
 namespace FootyApp.ViewModels
 {
-    public class MainWindowViewModel
+    public class MainWindowViewModel : INotifyPropertyChanged
     {
-        private readonly HttpClient _http = new HttpClient();
+        private static readonly HttpClient _http = new HttpClient();
         private const string ApiUrl = "http://localhost:5276/api/fixtures/team/771";
 
         public ObservableCollection<MatchDto> Matches { get; } = new ObservableCollection<MatchDto>();
-        public string StatusMessage { get; private set; } = "Ready";
+
+        private string _statusMessage = "Ready";
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            private set
+            {
+                if (_statusMessage == value) return;
+                _statusMessage = value;
+                OnPropertyChanged(nameof(StatusMessage));
+            }
+        }
 
         public async Task LoadAsync()
         {
@@ -41,5 +53,8 @@ namespace FootyApp.ViewModels
                 MessageBox.Show($"Failed to load fixtures: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

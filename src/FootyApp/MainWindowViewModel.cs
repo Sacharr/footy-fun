@@ -13,7 +13,14 @@ namespace FootyApp.ViewModels
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         private static readonly HttpClient _http = new HttpClient();
-        private const string ApiUrl = "http://localhost:5276/api/fixtures/team/771";
+        private readonly string _baseUrl;
+        private readonly string ApiUrl;
+
+        public MainWindowViewModel()
+        {
+            _baseUrl = App.Configuration["ApiBaseUrl"];
+            ApiUrl = _baseUrl + "/api/fixtures/team/760";
+        }
 
         public ObservableCollection<MatchDto> Matches { get; } = new ObservableCollection<MatchDto>();
 

@@ -15,7 +15,6 @@ namespace FootyApp
             InitializeComponent();
             _vm = new MainWindowViewModel();
             DataContext = _vm;
-            Loaded += async (_, __) => await _vm.LoadAsync();
         }
 
         private async void RefreshButton_Click(object sender, RoutedEventArgs e)

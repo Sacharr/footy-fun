@@ -1,6 +1,6 @@
 @Footy_Api_HostAddress = http://localhost:5276
 
-GET {{Footy_Api_HostAddress}}/api/fixtures/team/771
+GET {{Footy_Api_HostAddress}}/api/fixtures/team/760
 Accept: application/json
 
 ###

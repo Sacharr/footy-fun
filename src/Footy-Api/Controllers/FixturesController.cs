@@ -28,7 +28,7 @@ namespace FootyApi.Controllers
         [HttpGet("team/{teamId}")]
         public async Task<IActionResult> GetFixtures
         (
-            string teamId = "771",
+            string teamId = "57",
             [FromQuery] string? dateFrom = null,
             [FromQuery] string? dateTo = null,
             [FromQuery] string? status = "SCHEDULED",

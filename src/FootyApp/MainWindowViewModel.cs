@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
-using FootyApi.Services;
 
 namespace FootyApp.ViewModels
 {

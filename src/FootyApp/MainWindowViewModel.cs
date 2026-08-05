@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using FootyData.Models;
 
 namespace FootyApp.ViewModels
 {
@@ -21,7 +23,7 @@ namespace FootyApp.ViewModels
             ApiUrl = _baseUrl + "/api/fixtures/team/760";
         }
 
-        public ObservableCollection<MatchDto> Matches { get; } = new ObservableCollection<MatchDto>();
+        public ObservableCollection<MatchSummary> Matches { get; } = new ObservableCollection<MatchSummary>();
 
         private string _statusMessage = "Ready";
         public string StatusMessage
@@ -46,11 +48,11 @@ namespace FootyApp.ViewModels
 
                 var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-                // API returns an array of matches -> deserialize to a list
-                var fixtures = JsonSerializer.Deserialize<List<MatchDto>>(json, opts);
+                // API returns an array of MatchSummary -> deserialize to a list
+                var fixtures = JsonSerializer.Deserialize<List<MatchSummary>>(json, opts);
 
                 Matches.Clear();
-                foreach (var m in fixtures ?? Enumerable.Empty<MatchDto>())
+                foreach (var m in fixtures ?? Enumerable.Empty<MatchSummary>())
                     Matches.Add(m);
 
                 StatusMessage = $"Loaded {Matches.Count} matches";

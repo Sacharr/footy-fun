@@ -20,7 +20,7 @@ namespace FootyApp.ViewModels
         public MainWindowViewModel()
         {
             _baseUrl = App.Configuration["ApiBaseUrl"];
-            ApiUrl = _baseUrl + "/api/fixtures/team/760";
+            ApiUrl = _baseUrl + "/api/fixtures/team/57";
         }
 
         public ObservableCollection<MatchSummary> Matches { get; } = new ObservableCollection<MatchSummary>();

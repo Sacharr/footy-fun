@@ -45,7 +45,7 @@ namespace FootyApi.Controllers
                 dateTo = fromDate.AddDays(90).ToString("yyyy-MM-dd");
             }
 
-            var competition = competitionId ?? FifaWorldCupId;
+            var competition = competitionId ?? PremierLeagueId;
 
             var queryParams = new List<string>
             {

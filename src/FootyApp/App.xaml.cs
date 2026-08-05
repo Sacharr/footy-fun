@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
-using System.Configuration;
-using System.Data;
 using System.IO;
 using System.Windows;
 
@@ -17,7 +15,8 @@ namespace FootyApp
         public App()
         {
             var builder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
+                // use AppContext.BaseDirectory so the WPF app reliably finds appsettings.json at runtime
+                .SetBasePath(System.AppContext.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{GetEnvironment()}.json", optional: true);
 

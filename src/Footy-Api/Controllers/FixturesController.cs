@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FootyApi.Models;
+using FootyData.Models;
 using FootyApi.Services;
 using System.Collections.Generic;
 

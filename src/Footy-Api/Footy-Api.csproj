@@ -13,4 +13,12 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.4" />
   </ItemGroup>
 
+	<ItemGroup>
+		<ProjectReference Include="..\FootyData\FootyData.csproj" />
+	</ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\" />
+  </ItemGroup>
+
 </Project>

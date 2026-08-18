@@ -16,9 +16,6 @@ namespace FootyApi.Controllers
         private const int DefaultTeamId = 57; // Fixed team id
         private const int PremierLeagueId = 2021; // Default competition id
         private const int ChampionsLeagueId = 2001; //other competition id
-        private const int FifaWorldCupId = 2000; // world cup id
-        private const int EnglandTeamId = 770;
-        private const int UsaTeamId = 771;
 
         public FixturesController(IFootyApiClient api)
         {

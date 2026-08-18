@@ -13,13 +13,13 @@
         </Grid.RowDefinitions>
 
         <StackPanel Orientation="Horizontal" Margin="0 0 0 8">
-            <ComboBox Width="200" Margin="0 0 8 0"
+            <ComboBox Width="160" Margin="0 0 8 0"
                       ItemsSource="{Binding Competitions}"
                       DisplayMemberPath="Name"
                       SelectedValuePath="Id"
                       SelectedValue="{Binding SelectedCompetitionId, Mode=TwoWay}" />
 
-            <ComboBox Width="240" Margin="0 0 8 0"
+            <ComboBox Width="180" Margin="0 0 8 0"
                       ItemsSource="{Binding Teams}"
                       DisplayMemberPath="Name"
                       SelectedValuePath="Id"

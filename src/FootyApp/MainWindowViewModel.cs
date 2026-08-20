@@ -80,8 +80,9 @@ namespace FootyApp.ViewModels
             {
                 StatusMessage = "Loading...";
 
-                // Build URL from selected team/competition
-                var apiUrl = $"{_baseUrl.TrimEnd('/')}/api/fixtures/team/{SelectedTeamId}?competitionId={SelectedCompetitionId}";
+                // Build URL from selected team/competition and request a large limit
+                // so the API returns all fixtures within its current dateFrom/dateTo range.
+                var apiUrl = $"{_baseUrl.TrimEnd('/')}/api/fixtures/team/{SelectedTeamId}?competitionId={SelectedCompetitionId}&limit=1000";
 
                 var res = await _http.GetAsync(apiUrl);
                 res.EnsureSuccessStatusCode();

@@ -36,11 +36,10 @@
                   CanUserAddRows="False"
                   SelectionMode="Single">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="60"/>
                 <DataGridTextColumn Header="Date (UTC)" Binding="{Binding UtcDate}" Width="160" />
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
                 <DataGridTextColumn Header="Home" Binding="{Binding HomeTeam.Name}" Width="*"/>
                 <DataGridTextColumn Header="Away" Binding="{Binding AwayTeam.Name}" Width="*"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
                 <DataGridTextColumn Header="Home Goals" Binding="{Binding Score.FullTime.Home}" Width="90"/>
                 <DataGridTextColumn Header="Away Goals" Binding="{Binding Score.FullTime.Away}" Width="90"/>
             </DataGrid.Columns>

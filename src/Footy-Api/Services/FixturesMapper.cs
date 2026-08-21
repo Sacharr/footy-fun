@@ -1,4 +1,7 @@
-﻿using FootyApi.Models;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using FootyData.Models;
 
 namespace FootyApi.Services
 {

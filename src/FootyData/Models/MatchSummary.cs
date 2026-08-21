@@ -1,6 +1,6 @@
 using System;
 
-namespace FootyApi.Models
+namespace FootyData.Models
 {
     public class MatchSummary
     {

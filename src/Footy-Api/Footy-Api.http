@@ -1,16 +1,16 @@
 @Footy_Api_HostAddress = http://localhost:5276
 
-GET {{Footy_Api_HostAddress}}/api/fixtures/team/771
+GET {{Footy_Api_HostAddress}}/api/fixtures/team/57
 Accept: application/json
 
 ###
 
-GET {{Footy_Api_HostAddress}}/api/fixtures/team/771?status=SCHEDULED&limit=10&competitionId=2000
+GET {{Footy_Api_HostAddress}}/api/fixtures/team/57?status=SCHEDULED&limit=10&competitionId=2000
 Accept: application/json
 
 ###
 
-GET {{Footy_Api_HostAddress}}/api/fixtures/team/770?dateFrom=2026-06-05&dateTo=2026-09-03&status=SCHEDULED&limit=5&competitionId=2021
+GET {{Footy_Api_HostAddress}}/api/fixtures/team/57?dateFrom=2026-08-05&dateTo=2027-01-01&status=SCHEDULED&limit=5&competitionId=2021
 Accept: application/json
 
 ###

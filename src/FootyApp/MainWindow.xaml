@@ -1,0 +1,48 @@
+﻿<Window x:Class="FootyApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FootyApp"
+        mc:Ignorable="d"
+        Title="Fixtures" Height="450" Width="900">
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Margin="0 0 0 8">
+            <ComboBox Width="160" Margin="0 0 8 0"
+                      ItemsSource="{Binding Competitions}"
+                      DisplayMemberPath="Name"
+                      SelectedValuePath="Id"
+                      SelectedValue="{Binding SelectedCompetitionId, Mode=TwoWay}" />
+
+            <ComboBox Width="180" Margin="0 0 8 0"
+                      ItemsSource="{Binding Teams}"
+                      DisplayMemberPath="Name"
+                      SelectedValuePath="Id"
+                      SelectedValue="{Binding SelectedTeamId, Mode=TwoWay}" />
+
+            <Button x:Name="RefreshButton" Content="Refresh" Width="80" Margin="0 0 8 0" Click="RefreshButton_Click"/>
+            <TextBlock VerticalAlignment="Center" Text="{Binding StatusMessage}" />
+        </StackPanel>
+
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding Matches}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  SelectionMode="Single">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Date (UTC)" Binding="{Binding UtcDate}" Width="160" />
+                <DataGridTextColumn Header="Home" Binding="{Binding HomeTeam.Name}" Width="*"/>
+                <DataGridTextColumn Header="Away" Binding="{Binding AwayTeam.Name}" Width="*"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                <DataGridTextColumn Header="Home Goals" Binding="{Binding Score.FullTime.Home}" Width="90"/>
+                <DataGridTextColumn Header="Away Goals" Binding="{Binding Score.FullTime.Away}" Width="90"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>

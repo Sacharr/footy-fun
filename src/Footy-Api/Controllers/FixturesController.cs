@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FootyApi.Models;
+using FootyData.Models;
 using FootyApi.Services;
 using System.Collections.Generic;
 
@@ -16,9 +16,6 @@ namespace FootyApi.Controllers
         private const int DefaultTeamId = 57; // Fixed team id
         private const int PremierLeagueId = 2021; // Default competition id
         private const int ChampionsLeagueId = 2001; //other competition id
-        private const int FifaWorldCupId = 2000; // world cup id
-        private const int EnglandTeamId = 770;
-        private const int UsaTeamId = 771;
 
         public FixturesController(IFootyApiClient api)
         {
@@ -28,7 +25,7 @@ namespace FootyApi.Controllers
         [HttpGet("team/{teamId}")]
         public async Task<IActionResult> GetFixtures
         (
-            string teamId = "771",
+            string teamId = "57",
             [FromQuery] string? dateFrom = null,
             [FromQuery] string? dateTo = null,
             [FromQuery] string? status = "SCHEDULED",
@@ -45,7 +42,7 @@ namespace FootyApi.Controllers
                 dateTo = fromDate.AddDays(90).ToString("yyyy-MM-dd");
             }
 
-            var competition = competitionId ?? FifaWorldCupId;
+            var competition = competitionId ?? PremierLeagueId;
 
             var queryParams = new List<string>
             {

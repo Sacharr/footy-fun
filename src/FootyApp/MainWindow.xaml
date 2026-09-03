@@ -36,7 +36,8 @@
                   CanUserAddRows="False"
                   SelectionMode="Single">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Date (UTC)" Binding="{Binding UtcDate}" Width="160" />
+                <!-- show local time (user's timezone) -->
+                <DataGridTextColumn Header="Date" Binding="{Binding LocalDate, StringFormat=\{0:yyyy-MM-dd HH:mm\}}" Width="160" />
                 <DataGridTextColumn Header="Home" Binding="{Binding HomeTeam.Name}" Width="*"/>
                 <DataGridTextColumn Header="Away" Binding="{Binding AwayTeam.Name}" Width="*"/>
                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>

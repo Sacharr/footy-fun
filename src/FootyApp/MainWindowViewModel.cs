@@ -22,14 +22,12 @@ namespace FootyApp.ViewModels
         {
             _baseUrl = App.Configuration["ApiBaseUrl"];
 
-            // seed requested teams and competitions
-            Teams.Add(new Option(57, "Arsenal"));
-            Teams.Add(new Option(66, "Manchester United"));
-
+            // seed competitions and teams for the default competition
             Competitions.Add(new Option(2021, "Premier League"));
             Competitions.Add(new Option(2001, "Champions League"));
 
-            SelectedTeamId = 57;
+            // initialize teams based on the default competition
+            UpdateTeamsForCompetition(2021);
             SelectedCompetitionId = 2021;
         }
 
@@ -59,6 +57,9 @@ namespace FootyApp.ViewModels
                 if (_selectedCompetitionId == value) return;
                 _selectedCompetitionId = value;
                 OnPropertyChanged(nameof(SelectedCompetitionId));
+
+                // update available teams whenever the competition changes
+                UpdateTeamsForCompetition(_selectedCompetitionId);
             }
         }
 
@@ -71,6 +72,42 @@ namespace FootyApp.ViewModels
                 if (_statusMessage == value) return;
                 _statusMessage = value;
                 OnPropertyChanged(nameof(StatusMessage));
+            }
+        }
+
+        private void UpdateTeamsForCompetition(int competitionId)
+        {
+            Teams.Clear();
+
+            // Basic mapping for demo purposes. Replace with API call if you have a teams endpoint.
+            IEnumerable<Option> options = competitionId switch
+            {
+                2021 => new[]
+                {
+                    new Option(57, "Arsenal"),
+                    new Option(66, "Manchester United"),
+                    new Option(61, "Chelsea")
+                },
+                2001 => new[]
+                {
+                    new Option(86, "Real Madrid"),
+                    new Option(5, "Bayern Munich"),
+                    new Option(81, "Barcelona")
+                },
+                _ => new[]
+                {
+                    new Option(57, "Arsenal"),
+                    new Option(66, "Manchester United")
+                }
+            };
+
+            foreach (var t in options)
+                Teams.Add(t);
+
+            // set a sensible default selected team if any teams exist
+            if (Teams.Any())
+            {
+                SelectedTeamId = Teams.First().Id;
             }
         }
 

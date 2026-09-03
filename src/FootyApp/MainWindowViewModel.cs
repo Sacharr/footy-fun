@@ -22,11 +22,11 @@ namespace FootyApp.ViewModels
         {
             _baseUrl = App.Configuration["ApiBaseUrl"];
 
-            // seed competitions and teams for the default competition
+            // seed competitions for the UI
             Competitions.Add(new Option(2021, "Premier League"));
             Competitions.Add(new Option(2001, "Champions League"));
 
-            // initialize teams based on the default competition
+            // initialize teams based on the default competition (async fire-and-forget)
             UpdateTeamsForCompetition(2021);
             SelectedCompetitionId = 2021;
         }
@@ -58,7 +58,7 @@ namespace FootyApp.ViewModels
                 _selectedCompetitionId = value;
                 OnPropertyChanged(nameof(SelectedCompetitionId));
 
-                // update available teams whenever the competition changes
+                // update available teams whenever the competition changes (async fire-and-forget)
                 UpdateTeamsForCompetition(_selectedCompetitionId);
             }
         }
@@ -75,39 +75,73 @@ namespace FootyApp.ViewModels
             }
         }
 
-        private void UpdateTeamsForCompetition(int competitionId)
+        // Call the API endpoint added to the server: GET /api/competitions/{competitionId}/teams
+        private async void UpdateTeamsForCompetition(int competitionId)
         {
             Teams.Clear();
 
-            // Basic mapping for demo purposes. Replace with API call if you have a teams endpoint.
-            IEnumerable<Option> options = competitionId switch
+            try
             {
-                2021 => new[]
-                {
-                    new Option(57, "Arsenal"),
-                    new Option(66, "Manchester United"),
-                    new Option(61, "Chelsea")
-                },
-                2001 => new[]
-                {
-                    new Option(86, "Real Madrid"),
-                    new Option(5, "Bayern Munich"),
-                    new Option(81, "Barcelona")
-                },
-                _ => new[]
-                {
-                    new Option(57, "Arsenal"),
-                    new Option(66, "Manchester United")
-                }
-            };
+                StatusMessage = "Loading teams...";
+                var apiUrl = $"{_baseUrl.TrimEnd('/')}/api/competitions/{competitionId}/teams";
+                var res = await _http.GetAsync(apiUrl).ConfigureAwait(false);
+                res.EnsureSuccessStatusCode();
+                var json = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-            foreach (var t in options)
-                Teams.Add(t);
+                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var teams = JsonSerializer.Deserialize<List<TeamSummary>>(json, opts);
 
-            // set a sensible default selected team if any teams exist
-            if (Teams.Any())
+                // If API returned teams, map them to Option and populate the collection on the UI thread
+                var teamOptions = (teams ?? Enumerable.Empty<TeamSummary>())
+                    .Select(t => new Option(t.Id, t.Name ?? string.Empty))
+                    .ToList();
+
+                // Must update ObservableCollection on UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Teams.Clear();
+                    foreach (var t in teamOptions)
+                        Teams.Add(t);
+
+                    if (Teams.Any())
+                        SelectedTeamId = Teams.First().Id;
+                });
+
+                StatusMessage = $"Loaded {Teams.Count} teams";
+            }
+            catch (Exception)
             {
-                SelectedTeamId = Teams.First().Id;
+                // Fallback to small hardcoded list if the teams API isn't available
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Teams.Clear();
+                    IEnumerable<Option> options = competitionId switch
+                    {
+                        2021 => new[]
+                        {
+                            new Option(57, "Arsenal"),
+                            new Option(66, "Manchester United"),
+                            new Option(61, "Chelsea")
+                        },
+                        2001 => new[]
+                        {
+                            new Option(86, "Real Madrid"),
+                            new Option(5, "Bayern Munich"),
+                            new Option(81, "Barcelona")
+                        },
+                        _ => new[]
+                        {
+                            new Option(57, "Arsenal"),
+                            new Option(66, "Manchester United")
+                        }
+                    };
+
+                    foreach (var t in options) Teams.Add(t);
+
+                    if (Teams.Any()) SelectedTeamId = Teams.First().Id;
+
+                    StatusMessage = "Using fallback team list";
+                });
             }
         }
 

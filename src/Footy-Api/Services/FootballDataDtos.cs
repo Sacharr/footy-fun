@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
+using FootyData.Models;
 
 namespace FootyApi.Services
 {
@@ -124,5 +126,28 @@ namespace FootyApi.Services
 
         [JsonPropertyName("played")]
         public int Played { get; set; }
+    }
+
+    public class TeamsResponse
+    {
+        [JsonPropertyName("teams")]
+        public List<TeamDto> Teams { get; set; } = new List<TeamDto>();
+    }
+
+    public static class TeamsMapper
+    {
+        public static TeamSummary FromDto(TeamDto dto)
+        {
+            return new TeamSummary
+            {
+                Id = dto.Id,
+                Name = dto.Name
+            };
+        }
+
+        public static List<TeamSummary> FromDtos(List<TeamDto> dtos)
+        {
+            return dtos.Select(FromDto).ToList();
+        }
     }
 }

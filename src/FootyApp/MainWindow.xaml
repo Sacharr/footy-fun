@@ -4,8 +4,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FootyApp"
+        xmlns:vm="clr-namespace:FootyApp.ViewModels"
         mc:Ignorable="d"
-        Title="Fixtures" Height="450" Width="900">
+        Title="Fixtures" Height="450" Width="900"
+        d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}"
+        >
     <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

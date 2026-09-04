@@ -4,8 +4,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FootyApp"
+        xmlns:vm="clr-namespace:FootyApp.ViewModels"
         mc:Ignorable="d"
-        Title="Fixtures" Height="450" Width="900">
+        Title="Fixtures" Height="450" Width="900"
+        d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel, IsDesignTimeCreatable=False}"
+        >
     <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -36,7 +39,8 @@
                   CanUserAddRows="False"
                   SelectionMode="Single">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Date (UTC)" Binding="{Binding UtcDate}" Width="160" />
+                <!-- show local time with day of week (e.g. Monday, 04-12-2026 19:30) -->
+                <DataGridTextColumn Header="Date (Local)" Binding="{Binding LocalDate, StringFormat=\{0:dddd MM-dd-yyyy HH:mm\}}" Width="220" />
                 <DataGridTextColumn Header="Home" Binding="{Binding HomeTeam.Name}" Width="*"/>
                 <DataGridTextColumn Header="Away" Binding="{Binding AwayTeam.Name}" Width="*"/>
                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>

@@ -10,6 +10,18 @@ namespace FootyData.Models
         public TeamSummary? HomeTeam { get; set; }
         public TeamSummary? AwayTeam { get; set; }
         public ScoreSummary? Score { get; set; }
+
+        // Computed property: convert UtcDate to the user's local time
+        public DateTime LocalDate
+        {
+            get
+            {
+                if (UtcDate == DateTime.MinValue) return DateTime.MinValue;
+                // Ensure Utc kind then convert
+                var utc = DateTime.SpecifyKind(UtcDate, DateTimeKind.Utc);
+                return utc.ToLocalTime();
+            }
+        }
     }
 
     public class TeamSummary

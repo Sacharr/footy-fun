@@ -210,11 +210,15 @@ namespace FootyApp.ViewModels
                 StatusMessage = "Loading...";
                 var matches = await _repository.GetMatchesAsync(SelectedTeamId, SelectedCompetitionId).ConfigureAwait(false);
 
-                Matches.Clear();
-                foreach (var m in matches)
-                    Matches.Add(m);
+                // Must update ObservableCollection on UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Matches.Clear();
+                    foreach (var m in matches)
+                        Matches.Add(m);
 
-                StatusMessage = $"Loaded {Matches.Count} matches";
+                    StatusMessage = $"Loaded {Matches.Count} matches";
+                });
             }
             catch (Exception ex)
             {

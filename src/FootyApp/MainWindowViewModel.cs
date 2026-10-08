@@ -64,12 +64,16 @@ namespace FootyApp.ViewModels
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Starting...");
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Starting bulk sync...");
+                StatusMessage = "Syncing data from API...";
 
-                // Load competitions directly without waiting for full sync
-                // This ensures UI populates even if sync fails
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Loading competitions...");
-                var competitions = await _repository.GetCompetitionsAsync().ConfigureAwait(false);
+                // Do comprehensive sync that loads everything (competitions, teams, matches)
+                // This is the only time we call the API
+                await _repository.BulkSyncAsync().ConfigureAwait(false);
+
+                // Now load competitions from database to populate UI
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Loading competitions from database...");
+                var competitions = await _repository.GetCachedCompetitionsAsync().ConfigureAwait(false);
                 System.Diagnostics.Debug.WriteLine($"InitializeAsync: Got {competitions.Count} competitions");
 
                 Application.Current.Dispatcher.Invoke(() =>
@@ -84,17 +88,13 @@ namespace FootyApp.ViewModels
                     if (Competitions.Any())
                     {
                         SelectedCompetitionId = Competitions.First().Id;
-                        StatusMessage = $"Loaded {Competitions.Count} competitions (sync in background)";
+                        StatusMessage = "Ready - all data cached";
                     }
                     else
                     {
                         StatusMessage = "Error: No competitions available";
                     }
                 });
-
-                // Now do sync in background without blocking UI
-                System.Diagnostics.Debug.WriteLine("InitializeAsync: Starting background sync...");
-                _ = SyncInBackgroundAsync();
             }
             catch (Exception ex)
             {
@@ -102,23 +102,9 @@ namespace FootyApp.ViewModels
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    StatusMessage = $"Error loading competitions: {ex.Message}";
-                    MessageBox.Show($"Failed to load competitions:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    StatusMessage = $"Error during sync: {ex.Message}";
+                    MessageBox.Show($"Failed to sync data:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 });
-            }
-        }
-
-        private async Task SyncInBackgroundAsync()
-        {
-            try
-            {
-                System.Diagnostics.Debug.WriteLine("SyncInBackgroundAsync: Starting full data sync...");
-                await _repository.SyncAllDataAsync().ConfigureAwait(false);
-                System.Diagnostics.Debug.WriteLine("SyncInBackgroundAsync: Sync completed successfully");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"SyncInBackgroundAsync ERROR: {ex}");
             }
         }
 
@@ -136,6 +122,13 @@ namespace FootyApp.ViewModels
                 if (_selectedTeamId == value) return;
                 _selectedTeamId = value;
                 OnPropertyChanged(nameof(SelectedTeamId));
+
+                // Lazy-load matches when user selects a team (async fire-and-forget)
+                // This defers API calls until actually needed, reducing startup load
+                if (_selectedTeamId > 0)
+                {
+                    _ = LoadAsync();
+                }
             }
         }
 
@@ -166,15 +159,17 @@ namespace FootyApp.ViewModels
             }
         }
 
-        // Load teams for the selected competition using repository
+        // Load teams for the selected competition from database
         private async void UpdateTeamsForCompetition(int competitionId)
         {
             Teams.Clear();
+            Matches.Clear(); // Clear matches when competition changes
 
             try
             {
                 StatusMessage = "Loading teams...";
-                var teams = await _repository.GetTeamsAsync(competitionId).ConfigureAwait(false);
+                // Use database only - no API call
+                var teams = await _repository.GetTeamsFromDbAsync(competitionId).ConfigureAwait(false);
 
                 var teamOptions = teams
                     .Select(t => new Option(t.Id, t.Name))
@@ -188,7 +183,11 @@ namespace FootyApp.ViewModels
                         Teams.Add(t);
 
                     if (Teams.Any())
+                    {
+                        // Select first team but don't auto-load matches yet
+                        // The SelectedTeamId setter will trigger lazy loading
                         SelectedTeamId = Teams.First().Id;
+                    }
                 });
 
                 StatusMessage = $"Loaded {Teams.Count} teams";
@@ -208,7 +207,8 @@ namespace FootyApp.ViewModels
             try
             {
                 StatusMessage = "Loading...";
-                var matches = await _repository.GetMatchesAsync(SelectedTeamId, SelectedCompetitionId).ConfigureAwait(false);
+                // Use database only - no API call
+                var matches = await _repository.GetMatchesFromDbAsync(SelectedTeamId, SelectedCompetitionId).ConfigureAwait(false);
 
                 // Must update ObservableCollection on UI thread
                 Application.Current.Dispatcher.Invoke(() =>

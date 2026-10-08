@@ -1,0 +1,235 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Windows;
+using FootyData.Models;
+using FootyData.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace FootyApp.ViewModels
+{
+    public record Option(int Id, string Name);
+
+    public class MainWindowViewModel : INotifyPropertyChanged
+    {
+        private static readonly HttpClient _http = new HttpClient();
+        private readonly string? _baseUrl;
+        private readonly IDataRepository _repository;
+
+        public MainWindowViewModel()
+        {
+            _baseUrl = App.Configuration?["ApiBaseUrl"];
+            System.Diagnostics.Debug.WriteLine($"MainWindowViewModel: ApiBaseUrl = {_baseUrl}");
+
+            try
+            {
+                // Initialize database and repository
+                var dbPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "FootyFun",
+                    "footy.db"
+                );
+                System.Diagnostics.Debug.WriteLine($"MainWindowViewModel: DB Path = {dbPath}");
+
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(dbPath)!);
+
+                var connectionString = $"Data Source={dbPath}";
+                System.Diagnostics.Debug.WriteLine($"MainWindowViewModel: Ensuring database is created...");
+                FootyDbContext.EnsureCreated(connectionString);
+                System.Diagnostics.Debug.WriteLine($"MainWindowViewModel: Database created successfully");
+
+                var options = new DbContextOptionsBuilder<FootyDbContext>()
+                    .UseSqlite(connectionString)
+                    .Options;
+
+                var dbContext = new FootyDbContext(options);
+                _repository = new DataRepository(_http, _baseUrl ?? "http://localhost:5000", dbContext);
+                System.Diagnostics.Debug.WriteLine($"MainWindowViewModel: Repository initialized");
+
+                // initialize competitions (async fire-and-forget)
+                InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MainWindowViewModel INIT ERROR: {ex}");
+                throw;
+            }
+        }
+
+        private async void InitializeAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Starting...");
+
+                // Load competitions directly without waiting for full sync
+                // This ensures UI populates even if sync fails
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Loading competitions...");
+                var competitions = await _repository.GetCompetitionsAsync().ConfigureAwait(false);
+                System.Diagnostics.Debug.WriteLine($"InitializeAsync: Got {competitions.Count} competitions");
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Competitions.Clear();
+                    foreach (var (id, name) in competitions)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Adding {id}: {name}");
+                        Competitions.Add(new Option(id, name));
+                    }
+
+                    if (Competitions.Any())
+                    {
+                        SelectedCompetitionId = Competitions.First().Id;
+                        StatusMessage = $"Loaded {Competitions.Count} competitions (sync in background)";
+                    }
+                    else
+                    {
+                        StatusMessage = "Error: No competitions available";
+                    }
+                });
+
+                // Now do sync in background without blocking UI
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Starting background sync...");
+                _ = SyncInBackgroundAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"InitializeAsync ERROR: {ex}");
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    StatusMessage = $"Error loading competitions: {ex.Message}";
+                    MessageBox.Show($"Failed to load competitions:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                });
+            }
+        }
+
+        private async Task SyncInBackgroundAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("SyncInBackgroundAsync: Starting full data sync...");
+                await _repository.SyncAllDataAsync().ConfigureAwait(false);
+                System.Diagnostics.Debug.WriteLine("SyncInBackgroundAsync: Sync completed successfully");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SyncInBackgroundAsync ERROR: {ex}");
+            }
+        }
+
+        public ObservableCollection<MatchSummary> Matches { get; } = new ObservableCollection<MatchSummary>();
+
+        public ObservableCollection<Option> Teams { get; } = new ObservableCollection<Option>();
+        public ObservableCollection<Option> Competitions { get; } = new ObservableCollection<Option>();
+
+        private int _selectedTeamId;
+        public int SelectedTeamId
+        {
+            get => _selectedTeamId;
+            set
+            {
+                if (_selectedTeamId == value) return;
+                _selectedTeamId = value;
+                OnPropertyChanged(nameof(SelectedTeamId));
+            }
+        }
+
+        private int _selectedCompetitionId;
+        public int SelectedCompetitionId
+        {
+            get => _selectedCompetitionId;
+            set
+            {
+                if (_selectedCompetitionId == value) return;
+                _selectedCompetitionId = value;
+                OnPropertyChanged(nameof(SelectedCompetitionId));
+
+                // update available teams whenever the competition changes (async fire-and-forget)
+                UpdateTeamsForCompetition(_selectedCompetitionId);
+            }
+        }
+
+        private string _statusMessage = "Ready";
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            private set
+            {
+                if (_statusMessage == value) return;
+                _statusMessage = value;
+                OnPropertyChanged(nameof(StatusMessage));
+            }
+        }
+
+        // Load teams for the selected competition from database
+        private async void UpdateTeamsForCompetition(int competitionId)
+        {
+            Teams.Clear();
+
+            try
+            {
+                StatusMessage = "Loading teams...";
+                // Use database only - no API call
+                var teams = await _repository.GetTeamsFromDbAsync(competitionId).ConfigureAwait(false);
+
+                var teamOptions = teams
+                    .Select(t => new Option(t.Id, t.Name))
+                    .ToList();
+
+                // Must update ObservableCollection on UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Teams.Clear();
+                    foreach (var t in teamOptions)
+                        Teams.Add(t);
+
+                    if (Teams.Any())
+                        SelectedTeamId = Teams.First().Id;
+                });
+
+                StatusMessage = $"Loaded {Teams.Count} teams";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Error loading teams";
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show($"Failed to load teams: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                });
+            }
+        }
+
+        public async Task LoadAsync()
+        {
+            try
+            {
+                StatusMessage = "Loading...";
+                // Use database only - no API call
+                var matches = await _repository.GetMatchesFromDbAsync(SelectedTeamId, SelectedCompetitionId).ConfigureAwait(false);
+
+                // Must update ObservableCollection on UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Matches.Clear();
+                    foreach (var m in matches)
+                        Matches.Add(m);
+
+                    StatusMessage = $"Loaded {Matches.Count} matches";
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Error loading data";
+                MessageBox.Show($"Failed to load fixtures: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+}

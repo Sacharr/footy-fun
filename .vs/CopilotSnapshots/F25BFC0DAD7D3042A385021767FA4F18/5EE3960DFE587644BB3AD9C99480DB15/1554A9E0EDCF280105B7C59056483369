@@ -1,4 +1,4 @@
-# API Call Analysis for Footy-Fun
+﻿# API Call Analysis for Footy-Fun
 
 ## Summary
 - **On App Startup:** 3 API calls (competitions + 2 teams)

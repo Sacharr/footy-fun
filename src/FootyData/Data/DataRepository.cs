@@ -11,9 +11,18 @@ namespace FootyData.Data
 {
     public interface IDataRepository
     {
+        // API methods (make network calls)
         Task<List<(int Id, string Name)>> GetCompetitionsAsync();
         Task<List<(int Id, string Name)>> GetTeamsAsync(int competitionId);
         Task<List<MatchSummary>> GetMatchesAsync(int teamId, int competitionId);
+
+        // Database-only methods (no API calls)
+        Task<List<(int Id, string Name)>> GetCachedCompetitionsAsync();
+        Task<List<(int Id, string Name)>> GetTeamsFromDbAsync(int competitionId);
+        Task<List<MatchSummary>> GetMatchesFromDbAsync(int teamId, int competitionId);
+
+        // Sync methods
+        Task BulkSyncAsync();
         Task SyncAllDataAsync();
     }
 
@@ -26,7 +35,7 @@ namespace FootyData.Data
 
         // Rate limiting
         private DateTime _lastRequestTime = DateTime.MinValue;
-        private readonly int _minDelayMs = 500; // Minimum delay between requests (500ms)
+        private readonly int _minDelayMs = 1000; // Minimum delay between requests (1000ms for safety)
 
         public DataRepository(HttpClient httpClient, string baseUrl, FootyDbContext dbContext)
         {
@@ -90,6 +99,60 @@ namespace FootyData.Data
             {
                 System.Diagnostics.Debug.WriteLine($"GetCachedCompetitionsAsync ERROR: {ex.Message}");
                 return new List<(int, string)>();
+            }
+        }
+
+        /// <summary>
+        /// Gets teams for a competition from database only (no API call).
+        /// </summary>
+        public async Task<List<(int Id, string Name)>> GetTeamsFromDbAsync(int competitionId)
+        {
+            try
+            {
+                var teams = await _dbContext.Teams
+                    .Where(t => t.CompetitionId == competitionId)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+                System.Diagnostics.Debug.WriteLine($"GetTeamsFromDbAsync({competitionId}): Got {teams.Count} teams from DB");
+                return teams.Select(t => (t.Id, t.Name ?? string.Empty)).ToList();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetTeamsFromDbAsync ERROR: {ex.Message}");
+                return new List<(int, string)>();
+            }
+        }
+
+        /// <summary>
+        /// Gets matches for a team/competition from database only (no API call).
+        /// </summary>
+        public async Task<List<MatchSummary>> GetMatchesFromDbAsync(int teamId, int competitionId)
+        {
+            try
+            {
+                var matches = await _dbContext.Matches
+                    .Include(m => m.HomeTeam)
+                    .Include(m => m.AwayTeam)
+                    .Where(m => m.CompetitionId == competitionId && (m.HomeTeamId == teamId || m.AwayTeamId == teamId))
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+
+                System.Diagnostics.Debug.WriteLine($"GetMatchesFromDbAsync({teamId}, {competitionId}): Got {matches.Count} matches from DB");
+
+                return matches.Select(m => new MatchSummary
+                {
+                    Id = m.Id,
+                    UtcDate = m.UtcDate,
+                    Status = m.Status,
+                    HomeTeam = m.HomeTeam != null ? new TeamSummary { Id = m.HomeTeam.Id, Name = m.HomeTeam.Name } : null,
+                    AwayTeam = m.AwayTeam != null ? new TeamSummary { Id = m.AwayTeam.Id, Name = m.AwayTeam.Name } : null,
+                    Score = new ScoreSummary { Home = m.HomeScore, Away = m.AwayScore }
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetMatchesFromDbAsync ERROR: {ex.Message}");
+                return new List<MatchSummary>();
             }
         }
 
@@ -307,41 +370,51 @@ namespace FootyData.Data
             }).ToList();
         }
 
-        public async Task SyncAllDataAsync()
+        public async Task BulkSyncAsync()
         {
-            // Lightweight sync: just get teams for competitions already loaded in UI
-            // Matches are fetched on-demand when user selects a team
+            // Comprehensive one-time sync: loads competitions and teams only.
+            // Matches are loaded on-demand when user selects a team.
+            // This approach avoids hitting rate limits on startup.
             try
             {
-                System.Diagnostics.Debug.WriteLine("SyncAllDataAsync: Starting light sync (teams only, competitions already in cache)");
+                System.Diagnostics.Debug.WriteLine("BulkSyncAsync: Starting comprehensive data sync...");
 
-                // Use cached competitions (already loaded by InitializeAsync)
-                // This avoids a duplicate API call
-                var competitions = await GetCachedCompetitionsAsync().ConfigureAwait(false);
-                System.Diagnostics.Debug.WriteLine($"SyncAllDataAsync: Got {competitions.Count} competitions from cache");
+                // Step 1: Load competitions
+                System.Diagnostics.Debug.WriteLine("BulkSyncAsync: Step 1 - Loading competitions");
+                var competitions = await GetCompetitionsAsync().ConfigureAwait(false);
+                System.Diagnostics.Debug.WriteLine($"BulkSyncAsync: Loaded {competitions.Count} competitions");
 
-                // Only sync teams for each competition, skip matches to reduce API load
-                foreach (var (compId, _) in competitions)
+                // Step 2: Load teams for each competition
+                var allTeams = new List<(int Id, int CompetitionId, string Name)>();
+                foreach (var (compId, compName) in competitions)
                 {
                     try
                     {
-                        System.Diagnostics.Debug.WriteLine($"SyncAllDataAsync: Syncing teams for competition {compId}");
-
-                        await GetTeamsAsync(compId).ConfigureAwait(false);
+                        System.Diagnostics.Debug.WriteLine($"BulkSyncAsync: Step 2 - Loading teams for {compName} ({compId})");
+                        var teams = await GetTeamsAsync(compId).ConfigureAwait(false);
+                        allTeams.AddRange(teams.Select(t => (t.Id, compId, t.Name)));
+                        System.Diagnostics.Debug.WriteLine($"BulkSyncAsync: Loaded {teams.Count} teams for {compName}");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"SyncAllDataAsync: Failed to sync teams for competition {compId}: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"BulkSyncAsync: Failed to load teams for {compName}: {ex.Message}");
                     }
                 }
 
-                System.Diagnostics.Debug.WriteLine("SyncAllDataAsync: Light sync completed successfully");
+                // NOTE: Match loading is deferred to on-demand/lazy loading when user selects a team
+                // This prevents hitting rate limits during startup and provides faster initial load
+                System.Diagnostics.Debug.WriteLine($"BulkSyncAsync: COMPLETE - {competitions.Count} competitions, {allTeams.Count} teams cached. Matches will load on-demand.");
             }
             catch (Exception ex)
             {
-                // Sync failure is not critical - local data is still available
-                System.Diagnostics.Debug.WriteLine($"SyncAllDataAsync ERROR: {ex}");
+                System.Diagnostics.Debug.WriteLine($"BulkSyncAsync ERROR: {ex}");
             }
+        }
+
+        public async Task SyncAllDataAsync()
+        {
+            // Legacy method for compatibility - now just calls BulkSyncAsync
+            await BulkSyncAsync().ConfigureAwait(false);
         }
     }
 

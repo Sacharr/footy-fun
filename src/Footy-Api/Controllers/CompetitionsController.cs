@@ -13,10 +13,23 @@ namespace FootyApi.Controllers
     {
         private readonly IFootyApiClient _api;
         private const int PremierLeagueId = 2021;
+        private const int ChampionsLeagueId = 2001;
 
         public CompetitionsController(IFootyApiClient api)
         {
             _api = api;
+        }
+
+        [HttpGet]
+        public IActionResult GetCompetitions()
+        {
+            // Return the known competitions that the app supports
+            var competitions = new[]
+            {
+                new { id = PremierLeagueId, name = "Premier League" },
+                new { id = ChampionsLeagueId, name = "Champions League" }
+            };
+            return Ok(competitions);
         }
 
         [HttpGet("{competitionId}/teams")]

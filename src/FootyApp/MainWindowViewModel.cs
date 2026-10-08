@@ -4,10 +4,11 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using FootyData.Models;
+using FootyData.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace FootyApp.ViewModels
 {
@@ -16,19 +17,109 @@ namespace FootyApp.ViewModels
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         private static readonly HttpClient _http = new HttpClient();
-        private readonly string _baseUrl;
+        private readonly string? _baseUrl;
+        private readonly IDataRepository _repository;
 
         public MainWindowViewModel()
         {
-            _baseUrl = App.Configuration["ApiBaseUrl"];
+            _baseUrl = App.Configuration?["ApiBaseUrl"];
+            System.Diagnostics.Debug.WriteLine($"MainWindowViewModel: ApiBaseUrl = {_baseUrl}");
 
-            // seed competitions for the UI
-            Competitions.Add(new Option(2021, "Premier League"));
-            Competitions.Add(new Option(2001, "Champions League"));
+            try
+            {
+                // Initialize database and repository
+                var dbPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "FootyFun",
+                    "footy.db"
+                );
+                System.Diagnostics.Debug.WriteLine($"MainWindowViewModel: DB Path = {dbPath}");
 
-            // initialize teams based on the default competition (async fire-and-forget)
-            UpdateTeamsForCompetition(2021);
-            SelectedCompetitionId = 2021;
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(dbPath)!);
+
+                var connectionString = $"Data Source={dbPath}";
+                System.Diagnostics.Debug.WriteLine($"MainWindowViewModel: Ensuring database is created...");
+                FootyDbContext.EnsureCreated(connectionString);
+                System.Diagnostics.Debug.WriteLine($"MainWindowViewModel: Database created successfully");
+
+                var options = new DbContextOptionsBuilder<FootyDbContext>()
+                    .UseSqlite(connectionString)
+                    .Options;
+
+                var dbContext = new FootyDbContext(options);
+                _repository = new DataRepository(_http, _baseUrl ?? "http://localhost:5000", dbContext);
+                System.Diagnostics.Debug.WriteLine($"MainWindowViewModel: Repository initialized");
+
+                // initialize competitions (async fire-and-forget)
+                InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MainWindowViewModel INIT ERROR: {ex}");
+                throw;
+            }
+        }
+
+        private async void InitializeAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Starting...");
+
+                // Load competitions directly without waiting for full sync
+                // This ensures UI populates even if sync fails
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Loading competitions...");
+                var competitions = await _repository.GetCompetitionsAsync().ConfigureAwait(false);
+                System.Diagnostics.Debug.WriteLine($"InitializeAsync: Got {competitions.Count} competitions");
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Competitions.Clear();
+                    foreach (var (id, name) in competitions)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Adding {id}: {name}");
+                        Competitions.Add(new Option(id, name));
+                    }
+
+                    if (Competitions.Any())
+                    {
+                        SelectedCompetitionId = Competitions.First().Id;
+                        StatusMessage = $"Loaded {Competitions.Count} competitions (sync in background)";
+                    }
+                    else
+                    {
+                        StatusMessage = "Error: No competitions available";
+                    }
+                });
+
+                // Now do sync in background without blocking UI
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Starting background sync...");
+                _ = SyncInBackgroundAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"InitializeAsync ERROR: {ex}");
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    StatusMessage = $"Error loading competitions: {ex.Message}";
+                    MessageBox.Show($"Failed to load competitions:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                });
+            }
+        }
+
+        private async Task SyncInBackgroundAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("SyncInBackgroundAsync: Starting full data sync...");
+                await _repository.SyncAllDataAsync().ConfigureAwait(false);
+                System.Diagnostics.Debug.WriteLine("SyncInBackgroundAsync: Sync completed successfully");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SyncInBackgroundAsync ERROR: {ex}");
+            }
         }
 
         public ObservableCollection<MatchSummary> Matches { get; } = new ObservableCollection<MatchSummary>();
@@ -75,7 +166,7 @@ namespace FootyApp.ViewModels
             }
         }
 
-        // Call the API endpoint added to the server: GET /api/competitions/{competitionId}/teams
+        // Load teams for the selected competition using repository
         private async void UpdateTeamsForCompetition(int competitionId)
         {
             Teams.Clear();
@@ -83,17 +174,10 @@ namespace FootyApp.ViewModels
             try
             {
                 StatusMessage = "Loading teams...";
-                var apiUrl = $"{_baseUrl.TrimEnd('/')}/api/competitions/{competitionId}/teams";
-                var res = await _http.GetAsync(apiUrl).ConfigureAwait(false);
-                res.EnsureSuccessStatusCode();
-                var json = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var teams = await _repository.GetTeamsAsync(competitionId).ConfigureAwait(false);
 
-                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var teams = JsonSerializer.Deserialize<List<TeamSummary>>(json, opts);
-
-                // If API returned teams, map them to Option and populate the collection on the UI thread
-                var teamOptions = (teams ?? Enumerable.Empty<TeamSummary>())
-                    .Select(t => new Option(t.Id, t.Name ?? string.Empty))
+                var teamOptions = teams
+                    .Select(t => new Option(t.Id, t.Name))
                     .ToList();
 
                 // Must update ObservableCollection on UI thread
@@ -109,38 +193,12 @@ namespace FootyApp.ViewModels
 
                 StatusMessage = $"Loaded {Teams.Count} teams";
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Fallback to small hardcoded list if the teams API isn't available
+                StatusMessage = "Error loading teams";
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Teams.Clear();
-                    IEnumerable<Option> options = competitionId switch
-                    {
-                        2021 => new[]
-                        {
-                            new Option(57, "Arsenal"),
-                            new Option(66, "Manchester United"),
-                            new Option(61, "Chelsea")
-                        },
-                        2001 => new[]
-                        {
-                            new Option(86, "Real Madrid"),
-                            new Option(5, "Bayern Munich"),
-                            new Option(81, "Barcelona")
-                        },
-                        _ => new[]
-                        {
-                            new Option(57, "Arsenal"),
-                            new Option(66, "Manchester United")
-                        }
-                    };
-
-                    foreach (var t in options) Teams.Add(t);
-
-                    if (Teams.Any()) SelectedTeamId = Teams.First().Id;
-
-                    StatusMessage = "Using fallback team list";
+                    MessageBox.Show($"Failed to load teams: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 });
             }
         }
@@ -150,21 +208,10 @@ namespace FootyApp.ViewModels
             try
             {
                 StatusMessage = "Loading...";
-
-                // Build URL from selected team/competition and request a large limit
-                // so the API returns all fixtures within its current dateFrom/dateTo range.
-                var apiUrl = $"{_baseUrl.TrimEnd('/')}/api/fixtures/team/{SelectedTeamId}?competitionId={SelectedCompetitionId}&limit=1000";
-
-                var res = await _http.GetAsync(apiUrl);
-                res.EnsureSuccessStatusCode();
-                var json = await res.Content.ReadAsStringAsync();
-
-                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-                var fixtures = JsonSerializer.Deserialize<List<MatchSummary>>(json, opts);
+                var matches = await _repository.GetMatchesAsync(SelectedTeamId, SelectedCompetitionId).ConfigureAwait(false);
 
                 Matches.Clear();
-                foreach (var m in fixtures ?? Enumerable.Empty<MatchSummary>())
+                foreach (var m in matches)
                     Matches.Add(m);
 
                 StatusMessage = $"Loaded {Matches.Count} matches";
